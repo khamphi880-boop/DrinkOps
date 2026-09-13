@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import type { ReactNode, FormEvent } from "react";
 import {
   Coffee,
   Percent,
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 
 /* ============================================================
-   TYPES & INTERFACES (Fixes Vercel TS7031 Error)
+   TYPES & INTERFACES (Strict TypeScript for Vercel)
    ============================================================ */
 interface Ingredient {
   id: string;
@@ -60,10 +61,13 @@ interface MenuItemCalc {
   costSharePct: number;
 }
 
+type AccountType = "shop" | "personal";
+type TxnType = "income" | "expense";
+
 interface Transaction {
   id: string;
-  account: "shop" | "personal";
-  type: "income" | "expense";
+  account: AccountType;
+  type: TxnType;
   date: string;
   amount: number;
   description: string;
@@ -106,7 +110,6 @@ const C = {
   badBg: "#341D18",
   badBorder: "#562B22",
   good: "#94CF69",
-  goodBg: "#1E3317",
   shop: "#E5B342",
   shopBg: "#2B2011",
   shopBorder: "#5A421C",
@@ -283,28 +286,28 @@ function calcMenuItem(item: MenuItem): MenuItemCalc {
   };
 }
 
-const SMART_CATEGORIES = {
+const SMART_CATEGORIES: Record<AccountType, Array<{ label: string; title: string; type: TxnType; icon: string }>> = {
   shop: [
-    { label: "📦 ซื้อวัตถุดิบ/สต็อก", title: "ซื้อวัตถุดิบเข้าร้าน", type: "expense" as const },
-    { label: "🥤 แพ็กเกจจิ้ง/แก้ว", title: "ซื้อแก้ว-ฝา-หลอด", type: "expense" as const },
-    { label: "💡 ค่าน้ำ-ค่าไฟ", title: "ค่าน้ำ/ค่าไฟร้าน", type: "expense" as const },
-    { label: "🏢 ค่าเช่าที่", title: "ค่าเช่าร้าน/พื้นที่", type: "expense" as const },
-    { label: "👥 จ่ายค่าจ้าง", title: "ค่าแรงบาริสต้า/พนักงาน", type: "expense" as const },
-    { label: "🛵 ค่าขนส่ง/เดลิเวอรี่", title: "ค่าส่งพัสดุ/เดลิเวอรี่", type: "expense" as const },
-    { label: "💵 ยอดขายหน้าร้าน", title: "ยอดขายประจำวัน", type: "income" as const },
+    { label: "📦 ซื้อวัตถุดิบ/สต็อก", title: "ซื้อวัตถุดิบเข้าร้าน", type: "expense", icon: "📦" },
+    { label: "🥤 แพ็กเกจจิ้ง/แก้ว", title: "ซื้อแก้ว-ฝา-หลอด", type: "expense", icon: "🥤" },
+    { label: "💡 ค่าน้ำ-ค่าไฟ", title: "ค่าน้ำ/ค่าไฟร้าน", type: "expense", icon: "💡" },
+    { label: "🏢 ค่าเช่าที่", title: "ค่าเช่าร้าน/พื้นที่", type: "expense", icon: "🏢" },
+    { label: "👥 จ่ายค่าจ้าง", title: "ค่าแรงบาริสต้า/พนักงาน", type: "expense", icon: "👥" },
+    { label: "🛵 ค่าขนส่ง/เดลิเวอรี่", title: "ค่าส่งพัสดุ/เดลิเวอรี่", type: "expense", icon: "🛵" },
+    { label: "💵 ยอดขายหน้าร้าน", title: "ยอดขายประจำวัน", type: "income", icon: "💵" },
   ],
   personal: [
-    { label: "🍱 ค่าอาหาร", title: "อาหารมื้อประจำวัน", type: "expense" as const },
-    { label: "☕ กาแฟ/ของหวาน", title: "กาแฟ/ขนมส่วนตัว", type: "expense" as const },
-    { label: "⛽ ค่าน้ำมัน/เดินทาง", title: "ค่าน้ำมัน/ค่าเดินทาง", type: "expense" as const },
-    { label: "🛍️ ช้อปปิ้ง", title: "ซื้อของใช้ส่วนตัว", type: "expense" as const },
-    { label: "🏠 ค่าห้อง/คอนโด", title: "ค่าเช่าห้อง/ผ่อนบ้าน", type: "expense" as const },
-    { label: "💰 เงินเดือน/เงินโอน", title: "เงินเดือน/รายได้เสริม", type: "income" as const },
+    { label: "🍱 ค่าอาหาร", title: "อาหารมื้อประจำวัน", type: "expense", icon: "🍱" },
+    { label: "☕ กาแฟ/ของหวาน", title: "กาแฟ/ขนมส่วนตัว", type: "expense", icon: "☕" },
+    { label: "⛽ ค่าน้ำมัน/เดินทาง", title: "ค่าน้ำมัน/ค่าเดินทาง", type: "expense", icon: "⛽" },
+    { label: "🛍️ ช้อปปิ้ง", title: "ซื้อของใช้ส่วนตัว", type: "expense", icon: "🛍️" },
+    { label: "🏠 ค่าห้อง/คอนโด", title: "ค่าเช่าห้อง/ผ่อนบ้าน", type: "expense", icon: "🏠" },
+    { label: "💰 เงินเดือน/เงินโอน", title: "เงินเดือน/รายได้เสริม", type: "income", icon: "💰" },
   ],
 };
 
 /* ============================================================
-   TYPED UI ATOMS
+   TYPED UI ATOMS (Optional Props Handled Correctly)
    ============================================================ */
 function baseInputClasses() {
   return "w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] focus:ring-1 focus:ring-[#D2E659]/30 outline-none rounded-xl px-3 py-2 text-sm text-[#F8F3EA] placeholder-[#665445] transition-all";
@@ -323,7 +326,7 @@ interface NumFieldProps {
 function NumField({
   value,
   onChange,
-  placeholder,
+  placeholder = "",
   suffix,
   className = "",
   min,
@@ -363,9 +366,9 @@ interface TextFieldProps {
 function TextField({
   value,
   onChange,
-  placeholder,
+  placeholder = "",
   className = "",
-  required,
+  required = false,
   type = "text",
   id,
 }: TextFieldProps) {
@@ -385,11 +388,11 @@ function TextField({
 interface IconBtnProps {
   onClick: () => void;
   title?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   danger?: boolean;
 }
 
-function IconBtn({ onClick, title, children, danger }: IconBtnProps) {
+function IconBtn({ onClick, title, children, danger = false }: IconBtnProps) {
   return (
     <button
       type="button"
@@ -407,11 +410,11 @@ function IconBtn({ onClick, title, children, danger }: IconBtnProps) {
 }
 
 interface SectionCardProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   subtotal?: number;
-  right?: React.ReactNode;
-  children: React.ReactNode;
+  right?: ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
@@ -466,7 +469,7 @@ interface RowProps {
   tone?: "good" | "bad" | "normal";
 }
 
-function Row({ label, value, strong, tone }: RowProps) {
+function Row({ label, value, strong = false, tone = "normal" }: RowProps) {
   const toneColor =
     tone === "bad" ? C.bad : tone === "good" ? C.good : strong ? C.text : C.textDim;
   return (
@@ -513,7 +516,7 @@ function Stepper({ value, onChange, min = 1 }: StepperProps) {
 }
 
 /* ============================================================
-   PRICING TAB (แก้ไขปัญหาตัวเลขถูกบัง + เลย์เอาต์ชัดเจน)
+   PRICING TAB
    ============================================================ */
 interface PricingTabProps {
   items: MenuItem[];
@@ -729,9 +732,8 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
 
       {/* Main Grid: Form Inputs + Sticky Price Summary */}
       <div className="grid lg:grid-cols-12 gap-6">
-        {/* Left Side: Recipe & Fixed Overheads (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* 1. Ingredients Card with Redesigned Spacious Layout */}
+          {/* Ingredients Card */}
           <SectionCard
             icon={<GripVertical size={16} />}
             title="วัตถุดิบและสูตรชง"
@@ -762,7 +764,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Unit selector */}
                         <select
                           value={ing.unitType}
                           onChange={(e) =>
@@ -779,7 +780,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                           ))}
                         </select>
 
-                        {/* Calculated Cost Pill (Clear & Never Obstructed) */}
+                        {/* Calculated Cost Badge */}
                         <div className="px-2.5 py-1.5 rounded-xl bg-[#221711] border border-[#3A2A1E] text-right shrink-0">
                           <span className="text-[10px] block text-[#7D6D5E] leading-none mb-0.5">
                             ต้นทุน/แก้ว
@@ -799,7 +800,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                       </div>
                     </div>
 
-                    {/* Tier 2: 3 Spacious Number Fields (Never Squeezed) */}
+                    {/* Tier 2: 3 Number Fields (Spacious & Clean) */}
                     <div className="grid grid-cols-3 gap-2.5 pt-2.5 border-t border-[#231811]">
                       <div>
                         <span className="block text-[11px] font-medium text-[#7D6D5E] mb-1">
@@ -816,7 +817,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
 
                       <div>
                         <span className="block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                          ขนาดแพ็ค ({unitCfg.packUnit})
+                          ขนาด ({unitCfg.packUnit})
                         </span>
                         <NumField
                           value={ing.packageSize}
@@ -853,7 +854,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
             </button>
           </SectionCard>
 
-          {/* 2. Fixed Costs */}
+          {/* Fixed Costs Card */}
           <SectionCard
             icon={<Wallet size={16} />}
             title="ต้นทุนคงที่และแพ็กเกจจิ้งต่อแก้ว"
@@ -903,10 +904,9 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
           </SectionCard>
         </div>
 
-        {/* Right Side: Pricing Strategy & Sticky Live Summary (5 cols) */}
+        {/* Right Side: Pricing Strategy & Live Summary */}
         <div className="lg:col-span-5 space-y-6">
           <div className="lg:sticky lg:top-6 space-y-6">
-            {/* Pricing Mode Selector */}
             <SectionCard icon={<Percent size={16} />} title="กลยุทธ์ตั้งราคาขาย">
               <div className="grid grid-cols-3 gap-1.5 p-1 mb-4 rounded-xl bg-[#140E0A] border border-[#2B1F16]">
                 {[
@@ -950,7 +950,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                     />
                   </div>
 
-                  {/* Fast GP presets */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] text-[#7D6D5E]">เป้าหมายแนะนำ:</span>
                     {[50, 60, 65, 70].map((p) => (
@@ -1004,7 +1003,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
               )}
             </SectionCard>
 
-            {/* Hero Price & Profit Card */}
+            {/* Price & Profit Card */}
             <div
               className="rounded-3xl border p-6 relative overflow-hidden shadow-2xl"
               style={{ background: C.panelAlt, borderColor: C.border }}
@@ -1027,7 +1026,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                 </button>
               </div>
 
-              {/* Big Price Number */}
               <div
                 className="text-[44px] sm:text-[50px] leading-tight font-extrabold my-2 relative z-10"
                 style={{ ...headingFont, color: C.accent }}
@@ -1035,7 +1033,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                 ฿{thb(activeResult.finalPrice)}
               </div>
 
-              {/* Progress Bar: Cost vs Profit */}
               <div
                 className="h-2.5 rounded-full overflow-hidden flex mb-2 relative z-10"
                 style={{ background: "#2A1E16" }}
@@ -1061,7 +1058,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                 <span>กำไรสุทธิ {thb(100 - activeResult.costSharePct)}%</span>
               </div>
 
-              {/* Cost Rows Breakdown */}
               <div className="space-y-1.5 border-t border-[#312319] pt-4 relative z-10">
                 <Row label="ต้นทุนวัตถุดิบต่อแก้ว" value={`฿${thb(activeResult.ingredientCost)}`} />
                 <Row label="ต้นทุนคงที่/แพ็กเกจ" value={`฿${thb(activeResult.fixedCost)}`} />
@@ -1105,7 +1101,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
         </div>
       </div>
 
-      {/* Multi-menu comparison summary table */}
+      {/* Comparison Table */}
       {items.length > 1 && (
         <div
           className="mt-10 rounded-3xl border p-5 sm:p-6 overflow-x-auto"
@@ -1182,7 +1178,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
 }
 
 /* ============================================================
-   LEDGER TAB (รายรับ-รายจ่าย)
+   LEDGER TAB
    ============================================================ */
 interface LedgerTabProps {
   menuItems: MenuItem[];
@@ -1203,8 +1199,8 @@ function LedgerTab({
   syncNow,
   onOpenSheetConfig,
 }: LedgerTabProps) {
-  const [account, setAccount] = useState<"shop" | "personal">("shop");
-  const [txnType, setTxnType] = useState<"income" | "expense">("expense");
+  const [account, setAccount] = useState<AccountType>("shop");
+  const [txnType, setTxnType] = useState<TxnType>("expense");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayISO());
   const [amount, setAmount] = useState("");
@@ -1247,7 +1243,7 @@ function LedgerTab({
     if (!saleMenuId && menuItems[0]) setSaleMenuId(menuItems[0].id);
   };
 
-  const applyQuickTag = (tag: { title: string; type: "income" | "expense" }) => {
+  const applyQuickTag = (tag: { title: string; type: TxnType }) => {
     setSaleMode(false);
     setDescription(tag.title);
     setTxnType(tag.type);
@@ -1259,7 +1255,7 @@ function LedgerTab({
     setSaleMode(false);
   };
 
-  const submitTxn = (e: React.FormEvent) => {
+  const submitTxn = (e: FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!description.trim() || isNaN(amt) || amt <= 0 || !date) return;
@@ -1392,7 +1388,7 @@ function LedgerTab({
         ))}
       </div>
 
-      {/* Hero Balance Card */}
+      {/* Balance Card */}
       <div
         className="relative overflow-hidden rounded-3xl p-6 sm:p-7 mb-6 border shadow-2xl"
         style={{
@@ -1439,7 +1435,6 @@ function LedgerTab({
           </div>
         </div>
 
-        {/* Income vs Expense Grid */}
         <div
           className="relative z-10 pt-4 grid grid-cols-2 gap-4 border-t"
           style={{ borderColor: C.borderSoft }}
@@ -1462,7 +1457,6 @@ function LedgerTab({
           </div>
         </div>
 
-        {/* Income/Expense Meter Bar */}
         <div
           className="relative z-10 mt-4 h-2 rounded-full overflow-hidden flex"
           style={{ background: "#221710" }}
@@ -1509,7 +1503,7 @@ function LedgerTab({
           </span>
         </div>
 
-        {/* Smart Categories Chips */}
+        {/* Quick Categories */}
         {!saleMode && (
           <div className="flex flex-wrap gap-2 mb-4">
             {account === "shop" && (
@@ -1544,7 +1538,7 @@ function LedgerTab({
           </div>
         )}
 
-        {/* POS Mode: Sell from Menu Card */}
+        {/* POS Mode */}
         {saleMode && (
           <div
             className="mb-4 rounded-2xl p-4 border"
@@ -1618,7 +1612,7 @@ function LedgerTab({
           </div>
         )}
 
-        {/* Input Form */}
+        {/* Form */}
         <form onSubmit={submitTxn} className="space-y-3">
           <div className="p-1 rounded-xl grid grid-cols-2 gap-1 bg-[#140E0A] border border-[#2A1E16]">
             <button
@@ -1684,7 +1678,7 @@ function LedgerTab({
         </form>
       </div>
 
-      {/* Filter & Search Bar */}
+      {/* Search & Filter */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex-1 relative">
           <Search
@@ -1713,7 +1707,7 @@ function LedgerTab({
         </select>
       </div>
 
-      {/* Feed list */}
+      {/* Feed */}
       <div className="space-y-4">
         {sortedDates.length === 0 ? (
           <div
@@ -1742,7 +1736,6 @@ function LedgerTab({
                 className="rounded-2xl overflow-hidden border"
                 style={{ background: C.panel, borderColor: C.border }}
               >
-                {/* Date header */}
                 <div
                   className="px-4 py-2.5 flex items-center justify-between text-xs border-b"
                   style={{ background: C.panelAlt, borderColor: C.borderSoft }}
@@ -1756,7 +1749,6 @@ function LedgerTab({
                   </div>
                 </div>
 
-                {/* Day rows */}
                 <div>
                   {dayItems.map((it) => {
                     const isInc = it.type === "income";
@@ -1811,7 +1803,6 @@ function LedgerTab({
         )}
       </div>
 
-      {/* Footer toolbar */}
       <div
         className="mt-8 pt-5 flex items-center justify-between text-xs border-t text-[#7D6D5E]"
         style={{ borderColor: C.border }}
@@ -1919,14 +1910,14 @@ function SheetConfigModal({
    MAIN APP CONTROLLER
    ============================================================ */
 export default function App() {
-  const FONT_LOADED = useRef(false);
+  const fontLoaded = useRef(false);
   const STORAGE_KEY_MENU = "drinkops_menu_v2";
   const STORAGE_KEY_TXNS = "drinkops_txns_v2";
   const STORAGE_KEY_SHEET = "drinkops_sheet_url_v2";
 
   useEffect(() => {
-    if (FONT_LOADED.current) return;
-    FONT_LOADED.current = true;
+    if (fontLoaded.current) return;
+    fontLoaded.current = true;
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href =
@@ -1939,7 +1930,6 @@ export default function App() {
 
   const [tab, setTab] = useState<"pricing" | "ledger">("pricing");
 
-  // Pricing State (Saved to LocalStorage)
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_MENU);
@@ -1965,7 +1955,6 @@ export default function App() {
     return map;
   }, [menuItems]);
 
-  // Ledger State (Saved to LocalStorage + Sync Sheet)
   const [txns, setTxns] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TXNS);
@@ -2069,7 +2058,6 @@ export default function App() {
       }}
     >
       <div className="max-w-5xl mx-auto">
-        {/* Top App Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
           <div className="flex items-center gap-3.5">
             <div
@@ -2101,7 +2089,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Top-Level Navigation Tabs */}
         <div
           className="p-1.5 rounded-2xl grid grid-cols-2 gap-2 mb-7 border"
           style={{ background: C.panel, borderColor: C.border }}
@@ -2138,7 +2125,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Tab View */}
         {tab === "pricing" ? (
           <PricingTab
             items={menuItems}
