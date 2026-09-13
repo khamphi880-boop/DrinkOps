@@ -254,10 +254,19 @@ const SMART_CATEGORIES = {
    MINIMAL COMPONENT ATOMS
    ============================================================ */
 function baseInputClasses() {
-  return "w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] focus:ring-1 focus:ring-[#D2E659]/30 outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F8F3EA] placeholder-[#665445] transition-all duration-150";
+  return "w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] focus:ring-1 focus:ring-[#D2E659]/30 outline-none rounded-xl text-sm text-[#F8F3EA] placeholder-[#665445] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 }
 
-function NumField({ value, onChange, placeholder, suffix, className = "", min, step = "any" }) {
+function NumField({
+  value,
+  onChange,
+  placeholder,
+  suffix,
+  className = "",
+  inputClassName = "px-3 py-2.5",
+  min,
+  step = "any",
+}) {
   return (
     <div className={`relative ${className}`}>
       <input
@@ -268,10 +277,10 @@ function NumField({ value, onChange, placeholder, suffix, className = "", min, s
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`${baseInputClasses()} ${suffix ? "pr-9" : ""}`}
+        className={`${baseInputClasses()} ${inputClassName} ${suffix ? "pr-7" : ""}`}
       />
       {suffix && (
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#827161]">
+        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#827161]">
           {suffix}
         </span>
       )}
@@ -288,7 +297,7 @@ function TextField({ value, onChange, placeholder, className = "", required, typ
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`${baseInputClasses()} ${className}`}
+      className={`${baseInputClasses()} px-3.5 py-2.5 ${className}`}
     />
   );
 }
@@ -299,7 +308,7 @@ function IconBtn({ onClick, title, children, danger }) {
       type="button"
       onClick={onClick}
       title={title}
-      className={`shrink-0 rounded-xl p-2.5 border transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D2E659] ${
+      className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D2E659] ${
         danger
           ? "border-[#562B22] text-[#E57762] hover:bg-[#341D18]"
           : "border-[#3A2A1E] text-[#827161] hover:text-[#D2E659] hover:border-[#D2E659]/50 hover:bg-[#201711]"
@@ -595,22 +604,23 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
 
       {/* Main Grid: Form Inputs + Sticky Price Summary */}
       <div className="grid lg:grid-cols-12 gap-6">
-        {/* Left Side: Recipe & Fixed Overheads (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Left Side: Recipe & Fixed Overheads (8 cols) */}
+        <div className="lg:col-span-8 space-y-6">
           {/* 1. Ingredients */}
           <SectionCard
             icon={<GripVertical size={16} />}
             title="วัตถุดิบและสูตรชง"
             subtotal={activeResult.ingredientCost}
           >
-            {/* Desktop Column Header */}
-            <div className="hidden md:grid grid-cols-12 gap-2 px-2 mb-2.5 text-[11px] font-bold text-[#7D6D5E] uppercase tracking-wider">
-              <span className="col-span-4">ชื่อวัตถุดิบ</span>
-              <span className="col-span-3">หน่วยวัด</span>
-              <span className="col-span-2">ราคา/แพ็ค</span>
-              <span className="col-span-1">ขนาด</span>
-              <span className="col-span-1">ใช้/แก้ว</span>
-              <span className="col-span-1 text-right">ต้นทุน</span>
+            {/* Desktop Column Header (12 Columns Synchronized) */}
+            <div className="hidden md:grid grid-cols-12 gap-2 px-3 mb-2.5 text-[11px] font-bold text-[#7D6D5E] uppercase tracking-wider items-center">
+              <span className="col-span-3">ชื่อวัตถุดิบ</span>
+              <span className="col-span-2">หน่วยวัด</span>
+              <span className="col-span-2 text-center">ราคา/แพ็ค</span>
+              <span className="col-span-1 text-center">ขนาด</span>
+              <span className="col-span-1 text-center">ใช้/แก้ว</span>
+              <span className="col-span-2 text-right pr-1">ต้นทุน</span>
+              <span className="col-span-1 text-center">ลบ</span>
             </div>
 
             <div className="space-y-3">
@@ -625,9 +635,9 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                     className="p-3 md:p-2.5 rounded-2xl border transition-colors group"
                     style={{ background: "#150F0B", borderColor: C.borderSoft }}
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
-                      {/* Ingredient Name */}
-                      <div className="md:col-span-4">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                      {/* 1. ชื่อวัตถุดิบ (3 cols) */}
+                      <div className="md:col-span-3">
                         <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
                           ชื่อวัตถุดิบ
                         </span>
@@ -637,11 +647,12 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                             updateIngredient(active.id, ing.id, { name: v })
                           }
                           placeholder="เช่น ผงชาไทย, นมสด"
+                          className="py-2 px-2.5 text-xs sm:text-sm"
                         />
                       </div>
 
-                      {/* Unit Conversion Selector */}
-                      <div className="md:col-span-3">
+                      {/* 2. หน่วยวัด (2 cols) */}
+                      <div className="md:col-span-2">
                         <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
                           หน่วยวัด
                         </span>
@@ -652,7 +663,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                               unitType: e.target.value,
                             })
                           }
-                          className="w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] outline-none rounded-xl px-2.5 py-2.5 text-xs text-[#F8F3EA] cursor-pointer"
+                          className="w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] outline-none rounded-xl px-2 py-2 text-xs text-[#F8F3EA] cursor-pointer truncate"
                         >
                           {UNIT_PRESETS.map((u) => (
                             <option key={u.id} value={u.id}>
@@ -662,56 +673,63 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                         </select>
                       </div>
 
-                      {/* Numbers Triple */}
-                      <div className="grid grid-cols-3 md:col-span-4 gap-2">
-                        <div>
-                          <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                            ราคาแพ็ค
-                          </span>
-                          <NumField
-                            value={ing.packagePrice}
-                            onChange={(v) =>
-                              updateIngredient(active.id, ing.id, { packagePrice: v })
-                            }
-                            placeholder="฿"
-                          />
-                        </div>
-                        <div>
-                          <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                            ขนาด ({unitCfg.packUnit})
-                          </span>
-                          <NumField
-                            value={ing.packageSize}
-                            onChange={(v) =>
-                              updateIngredient(active.id, ing.id, { packageSize: v })
-                            }
-                            placeholder={unitCfg.packUnit}
-                          />
-                        </div>
-                        <div>
-                          <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                            ใช้ ({unitCfg.useUnit})
-                          </span>
-                          <NumField
-                            value={ing.usedPerCup}
-                            onChange={(v) =>
-                              updateIngredient(active.id, ing.id, { usedPerCup: v })
-                            }
-                            placeholder={unitCfg.useUnit}
-                          />
-                        </div>
+                      {/* 3. ราคาแพ็ค (2 cols) */}
+                      <div className="md:col-span-2">
+                        <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                          ราคาแพ็ค (฿)
+                        </span>
+                        <NumField
+                          value={ing.packagePrice}
+                          onChange={(v) =>
+                            updateIngredient(active.id, ing.id, { packagePrice: v })
+                          }
+                          placeholder="฿"
+                          inputClassName="py-2 px-2 text-center text-xs sm:text-sm"
+                        />
                       </div>
 
-                      {/* Per-item Cost & Delete */}
-                      <div className="md:col-span-1 flex items-center justify-between md:justify-end gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-[#241912]">
-                        <div className="text-left md:text-right">
-                          <span className="md:hidden text-xs text-[#7D6D5E] mr-2">
-                            ต้นทุน:
-                          </span>
-                          <span className="text-xs font-bold text-[#D2E659]">
-                            ฿{thb(rowCost)}
-                          </span>
-                        </div>
+                      {/* 4. ขนาดบรรจุ (1 col) */}
+                      <div className="md:col-span-1">
+                        <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                          ขนาด ({unitCfg.packUnit})
+                        </span>
+                        <NumField
+                          value={ing.packageSize}
+                          onChange={(v) =>
+                            updateIngredient(active.id, ing.id, { packageSize: v })
+                          }
+                          placeholder={unitCfg.packUnit}
+                          inputClassName="py-2 px-1 text-center text-xs sm:text-sm"
+                        />
+                      </div>
+
+                      {/* 5. ปริมาณที่ใช้ (1 col) */}
+                      <div className="md:col-span-1">
+                        <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                          ใช้ ({unitCfg.useUnit})
+                        </span>
+                        <NumField
+                          value={ing.usedPerCup}
+                          onChange={(v) =>
+                            updateIngredient(active.id, ing.id, { usedPerCup: v })
+                          }
+                          placeholder={unitCfg.useUnit}
+                          inputClassName="py-2 px-1 text-center text-xs sm:text-sm"
+                        />
+                      </div>
+
+                      {/* 6. คำนวณต้นทุน (2 cols) */}
+                      <div className="md:col-span-2 flex items-center justify-between md:justify-end pr-1 pt-2 md:pt-0 border-t md:border-t-0 border-[#241912]">
+                        <span className="md:hidden text-xs text-[#7D6D5E]">
+                          ต้นทุน:
+                        </span>
+                        <span className="text-xs font-bold text-[#D2E659] whitespace-nowrap">
+                          ฿{thb(rowCost)}
+                        </span>
+                      </div>
+
+                      {/* 7. ปุ่มลบ (1 col) */}
+                      <div className="md:col-span-1 flex justify-end md:justify-center">
                         <IconBtn
                           danger
                           title="ลบวัตถุดิบนี้"
@@ -784,15 +802,15 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
           </SectionCard>
         </div>
 
-        {/* Right Side: Pricing Strategy & Sticky Live Summary (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* Right Side: Pricing Strategy & Sticky Live Summary (4 cols) */}
+        <div className="lg:col-span-4 space-y-6">
           <div className="lg:sticky lg:top-6 space-y-6">
             {/* Pricing Mode Selector */}
             <SectionCard icon={<Percent size={16} />} title="กลยุทธ์ตั้งราคาขาย">
               <div className="grid grid-cols-3 gap-1.5 p-1 mb-4 rounded-xl bg-[#140E0A] border border-[#2B1F16]">
                 {[
                   { key: "margin", label: "% กำไร (GP)" },
-                  { key: "markup", label: "บวกเพิ่ม (Markup)" },
+                  { key: "markup", label: "บวกเพิ่ม" },
                   { key: "manual", label: "กำหนดเอง" },
                 ].map((m) => (
                   <button
@@ -810,15 +828,59 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                 ))}
               </div>
 
-              {active.pricingMode !== "manual" ? (
+              {active.pricingMode !== "margin" ? (
+                active.pricingMode === "markup" ? (
+                  <div className="space-y-3.5">
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-[#B9A998] mb-1.5">
+                        <span>เปอร์เซ็นต์บวกเพิ่ม (% Markup)</span>
+                      </div>
+                      <NumField
+                        value={active.targetPercent}
+                        onChange={(v) => updateItem(active.id, { targetPercent: v })}
+                        suffix="%"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="block text-[11px] text-[#B9A998] mb-1.5">
+                        ปัดราคาขายขึ้นเป็นเลขทวีคูณของ:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {[1, 5, 10].map((step) => (
+                          <button
+                            key={step}
+                            onClick={() => updateItem(active.id, { roundTo: step })}
+                            className={`flex-1 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                              Number(active.roundTo) === step
+                                ? "border-[#D2E659] text-[#D2E659] bg-[#D2E659]/10"
+                                : "border-[#3A2A1E] text-[#B9A998] hover:border-[#D2E659]/40"
+                            }`}
+                          >
+                            ฿{step}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="block text-[11px] text-[#B9A998] mb-1.5">
+                      ราคาขายหน้าร้านที่ต้องการตรวจสอบ (บาท)
+                    </span>
+                    <NumField
+                      value={active.manualPrice}
+                      onChange={(v) => updateItem(active.id, { manualPrice: v })}
+                      placeholder="เช่น 55"
+                      suffix="฿"
+                    />
+                  </div>
+                )
+              ) : (
                 <div className="space-y-3.5">
                   <div>
                     <div className="flex items-center justify-between text-xs text-[#B9A998] mb-1.5">
-                      <span>
-                        {active.pricingMode === "margin"
-                          ? "เป้ากำไรขั้นต้น (% GP จากราคาขาย)"
-                          : "เปอร์เซ็นต์บวกเพิ่ม (% Markup)"}
-                      </span>
+                      <span>เป้ากำไรขั้นต้น (% GP จากราคาขาย)</span>
                     </div>
                     <NumField
                       value={active.targetPercent}
@@ -834,7 +896,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                       <button
                         key={p}
                         onClick={() => updateItem(active.id, { targetPercent: p })}
-                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
+                        className={`text-xs px-2 py-1 rounded-lg border font-semibold transition-all ${
                           Number(active.targetPercent) === p
                             ? "border-[#D2E659] text-[#D2E659] bg-[#D2E659]/10"
                             : "border-[#3A2A1E] text-[#B9A998] hover:border-[#D2E659]/50"
@@ -865,18 +927,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                       ))}
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <span className="block text-[11px] text-[#B9A998] mb-1.5">
-                    ราคาขายหน้าร้านที่ต้องการตรวจสอบ (บาท)
-                  </span>
-                  <NumField
-                    value={active.manualPrice}
-                    onChange={(v) => updateItem(active.id, { manualPrice: v })}
-                    placeholder="เช่น 55"
-                    suffix="฿"
-                  />
                 </div>
               )}
             </SectionCard>
@@ -1529,6 +1579,7 @@ function LedgerTab({ menuItems, menuResults, txns, setTxns, sheetUrl, syncNow, o
                 placeholder="0.00"
                 suffix="฿"
                 className="flex-1"
+                inputClassName="py-3 px-3"
                 min="0.01"
               />
               <button
