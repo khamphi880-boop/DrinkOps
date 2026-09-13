@@ -18,85 +18,26 @@ import {
   Minus,
   Copy,
   Check,
+  RotateCcw,
+  Sparkles,
+  Calendar,
+  Layers,
+  ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 
 /* ============================================================
-   TYPES & INTERFACES (Fixes Vercel TS7031 Error)
-   ============================================================ */
-interface Ingredient {
-  id: string;
-  name: string;
-  unitType: string;
-  packagePrice: string;
-  packageSize: string;
-  usedPerCup: string;
-}
-
-interface FixedCost {
-  id: string;
-  name: string;
-  cost: string;
-}
-
-interface MenuItem {
-  id: string;
-  name: string;
-  ingredients: Ingredient[];
-  fixedCosts: FixedCost[];
-  pricingMode: "margin" | "markup" | "manual";
-  targetPercent: number | string;
-  manualPrice: string;
-  roundTo: number | string;
-}
-
-interface MenuItemCalc {
-  ingredientCost: number;
-  fixedCost: number;
-  totalCost: number;
-  finalPrice: number;
-  profit: number;
-  marginPct: number;
-  markupPct: number;
-  costSharePct: number;
-}
-
-interface Transaction {
-  id: string;
-  account: "shop" | "personal";
-  type: "income" | "expense";
-  date: string;
-  amount: number;
-  description: string;
-  icon?: string;
-  createdAt: number;
-  linkedMenuId?: string;
-  linkedMenuName?: string;
-  qty?: number;
-  unitCost?: number;
-  unitPrice?: number;
-  costTotal?: number;
-  profitTotal?: number;
-}
-
-interface UnitPreset {
-  id: string;
-  label: string;
-  packUnit: string;
-  useUnit: string;
-  factor: number;
-}
-
-/* ============================================================
-   DESIGN TOKENS
+   DESIGN TOKENS & PALETTE (Specialty Cafe Aesthetic)
    ============================================================ */
 const C = {
   bg: "#120D0A",
   bgRadialA: "#221711",
   panel: "#1A130E",
   panelAlt: "#221913",
+  panelHover: "#281E17",
   border: "#38291F",
   borderSoft: "#291E16",
-  accent: "#D2E659",
+  accent: "#D2E659", // Matcha Lime
   accentDim: "#96A63C",
   accentBg: "rgba(210, 230, 89, 0.10)",
   text: "#F8F3EA",
@@ -107,17 +48,20 @@ const C = {
   badBorder: "#562B22",
   good: "#94CF69",
   goodBg: "#1E3317",
-  shop: "#E5B342",
+  shop: "#E5B342", // Warm Gold
   shopBg: "#2B2011",
   shopBorder: "#5A421C",
-  personal: "#7AB2E2",
+  personal: "#7AB2E2", // Soft Sky
   personalBg: "#142230",
   personalBorder: "#27435F",
 };
 
 const headingFont = { fontFamily: "'Fraunces', Georgia, serif" };
 
-const UNIT_PRESETS: UnitPreset[] = [
+/* ============================================================
+   STANDARD UNITS & AUTO-CONVERSION
+   ============================================================ */
+const UNIT_PRESETS = [
   { id: "ml", label: "มล. (ml)", packUnit: "มล.", useUnit: "มล.", factor: 1 },
   { id: "l_to_ml", label: "ลิตร ➔ มล.", packUnit: "ลิตร", useUnit: "มล.", factor: 1000 },
   { id: "g", label: "กรัม (g)", packUnit: "กรัม", useUnit: "กรัม", factor: 1 },
@@ -127,9 +71,9 @@ const UNIT_PRESETS: UnitPreset[] = [
 ];
 
 /* ============================================================
-   HELPERS
+   HELPERS & LOCALSTORAGE
    ============================================================ */
-const thb = (n: number) =>
+const thb = (n) =>
   (Number.isFinite(n) ? n : 0).toLocaleString("th-TH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -137,7 +81,7 @@ const thb = (n: number) =>
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-const roundTo = (value: number, nearest: number) => {
+const roundTo = (value, nearest) => {
   if (!nearest || nearest <= 0) return value;
   return Math.ceil(value / nearest) * nearest;
 };
@@ -147,13 +91,13 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสฯ", "ศุกร์", "เสาร์"];
 
-function formatMonthYearThai(yyyyMm: string) {
+function formatMonthYearThai(yyyyMm) {
   if (!yyyyMm || !yyyyMm.includes("-")) return "";
   const [y, m] = yyyyMm.split("-");
   return `${THAI_MONTHS[parseInt(m, 10) - 1]} ${parseInt(y, 10) + 543}`;
 }
 
-function formatDayGroupThai(dateStr: string) {
+function formatDayGroupThai(dateStr) {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
   const dateObj = new Date(dateStr);
@@ -161,7 +105,10 @@ function formatDayGroupThai(dateStr: string) {
   return `${dayName}${parseInt(d, 10)} ${THAI_MONTHS[parseInt(m, 10) - 1]} ${parseInt(y, 10) + 543}`;
 }
 
-const newIngredient = (unitType = "ml"): Ingredient => ({
+/* ============================================================
+   DATA MODELS & CALCULATION
+   ============================================================ */
+const newIngredient = (unitType = "ml") => ({
   id: uid(),
   name: "",
   unitType,
@@ -170,13 +117,13 @@ const newIngredient = (unitType = "ml"): Ingredient => ({
   usedPerCup: "",
 });
 
-const newFixedCost = (name = "", cost = ""): FixedCost => ({
+const newFixedCost = (name = "", cost = "") => ({
   id: uid(),
   name,
   cost,
 });
 
-const initialDemoMenu = (): MenuItem[] => [
+const initialDemoMenu = () => [
   {
     id: "demo-thai-tea",
     name: "ชาไทยเย็นการันต์",
@@ -214,7 +161,7 @@ const initialDemoMenu = (): MenuItem[] => [
   },
 ];
 
-const newMenuItem = (n = 1): MenuItem => ({
+const newMenuItem = (n = 1) => ({
   id: uid(),
   name: `เมนูใหม่ ${n}`,
   ingredients: [newIngredient("g")],
@@ -228,7 +175,7 @@ const newMenuItem = (n = 1): MenuItem => ({
   roundTo: 5,
 });
 
-function calcSingleIngredient(ing: Ingredient): number {
+function calcSingleIngredient(ing) {
   const price = parseFloat(ing.packagePrice) || 0;
   const size = parseFloat(ing.packageSize) || 0;
   const used = parseFloat(ing.usedPerCup) || 0;
@@ -239,7 +186,7 @@ function calcSingleIngredient(ing: Ingredient): number {
   return (price / baseSize) * used;
 }
 
-function calcMenuItem(item: MenuItem): MenuItemCalc {
+function calcMenuItem(item) {
   const ingredientCost = item.ingredients.reduce(
     (sum, ing) => sum + calcSingleIngredient(ing),
     0
@@ -253,7 +200,7 @@ function calcMenuItem(item: MenuItem): MenuItemCalc {
   const totalCost = ingredientCost + fixedCost;
 
   let suggestedPrice = 0;
-  const pct = (parseFloat(String(item.targetPercent)) || 0) / 100;
+  const pct = (parseFloat(item.targetPercent) || 0) / 100;
   if (item.pricingMode === "margin") {
     suggestedPrice = pct < 1 ? totalCost / (1 - pct) : 0;
   } else if (item.pricingMode === "markup") {
@@ -262,7 +209,7 @@ function calcMenuItem(item: MenuItem): MenuItemCalc {
     suggestedPrice = parseFloat(item.manualPrice) || 0;
   }
 
-  const roundedPrice = roundTo(suggestedPrice, parseFloat(String(item.roundTo)) || 0);
+  const roundedPrice = roundTo(suggestedPrice, parseFloat(item.roundTo) || 0);
   const finalPrice =
     item.pricingMode === "manual" ? suggestedPrice : roundedPrice || suggestedPrice;
 
@@ -285,50 +232,32 @@ function calcMenuItem(item: MenuItem): MenuItemCalc {
 
 const SMART_CATEGORIES = {
   shop: [
-    { label: "📦 ซื้อวัตถุดิบ/สต็อก", title: "ซื้อวัตถุดิบเข้าร้าน", type: "expense" as const },
-    { label: "🥤 แพ็กเกจจิ้ง/แก้ว", title: "ซื้อแก้ว-ฝา-หลอด", type: "expense" as const },
-    { label: "💡 ค่าน้ำ-ค่าไฟ", title: "ค่าน้ำ/ค่าไฟร้าน", type: "expense" as const },
-    { label: "🏢 ค่าเช่าที่", title: "ค่าเช่าร้าน/พื้นที่", type: "expense" as const },
-    { label: "👥 จ่ายค่าจ้าง", title: "ค่าแรงบาริสต้า/พนักงาน", type: "expense" as const },
-    { label: "🛵 ค่าขนส่ง/เดลิเวอรี่", title: "ค่าส่งพัสดุ/เดลิเวอรี่", type: "expense" as const },
-    { label: "💵 ยอดขายหน้าร้าน", title: "ยอดขายประจำวัน", type: "income" as const },
+    { label: "📦 ซื้อวัตถุดิบ/สต็อก", title: "ซื้อวัตถุดิบเข้าร้าน", type: "expense", icon: "📦" },
+    { label: "🥤 แพ็กเกจจิ้ง/แก้ว", title: "ซื้อแก้ว-ฝา-หลอด", type: "expense", icon: "🥤" },
+    { label: "💡 ค่าน้ำ-ค่าไฟ", title: "ค่าน้ำ/ค่าไฟร้าน", type: "expense", icon: "💡" },
+    { label: "🏢 ค่าเช่าที่", title: "ค่าเช่าร้าน/พื้นที่", type: "expense", icon: "🏢" },
+    { label: "👥 จ่ายค่าจ้าง", title: "ค่าแรงบาริสต้า/พนักงาน", type: "expense", icon: "👥" },
+    { label: "🛵 ค่าขนส่ง/เดลิเวอรี่", title: "ค่าส่งพัสดุ/เดลิเวอรี่", type: "expense", icon: "🛵" },
+    { label: "💵 ยอดขายหน้าร้าน", title: "ยอดขายประจำวัน", type: "income", icon: "💵" },
   ],
   personal: [
-    { label: "🍱 ค่าอาหาร", title: "อาหารมื้อประจำวัน", type: "expense" as const },
-    { label: "☕ กาแฟ/ของหวาน", title: "กาแฟ/ขนมส่วนตัว", type: "expense" as const },
-    { label: "⛽ ค่าน้ำมัน/เดินทาง", title: "ค่าน้ำมัน/ค่าเดินทาง", type: "expense" as const },
-    { label: "🛍️ ช้อปปิ้ง", title: "ซื้อของใช้ส่วนตัว", type: "expense" as const },
-    { label: "🏠 ค่าห้อง/คอนโด", title: "ค่าเช่าห้อง/ผ่อนบ้าน", type: "expense" as const },
-    { label: "💰 เงินเดือน/เงินโอน", title: "เงินเดือน/รายได้เสริม", type: "income" as const },
+    { label: "🍱 ค่าอาหาร", title: "อาหารมื้อประจำวัน", type: "expense", icon: "🍱" },
+    { label: "☕ กาแฟ/ของหวาน", title: "กาแฟ/ขนมส่วนตัว", type: "expense", icon: "☕" },
+    { label: "⛽ ค่าน้ำมัน/เดินทาง", title: "ค่าน้ำมัน/ค่าเดินทาง", type: "expense", icon: "⛽" },
+    { label: "🛍️ ช้อปปิ้ง", title: "ซื้อของใช้ส่วนตัว", type: "expense", icon: "🛍️" },
+    { label: "🏠 ค่าห้อง/คอนโด", title: "ค่าเช่าห้อง/ผ่อนบ้าน", type: "expense", icon: "🏠" },
+    { label: "💰 เงินเดือน/เงินโอน", title: "เงินเดือน/รายได้เสริม", type: "income", icon: "💰" },
   ],
 };
 
 /* ============================================================
-   TYPED UI ATOMS
+   MINIMAL COMPONENT ATOMS
    ============================================================ */
 function baseInputClasses() {
-  return "w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] focus:ring-1 focus:ring-[#D2E659]/30 outline-none rounded-xl px-3 py-2 text-sm text-[#F8F3EA] placeholder-[#665445] transition-all";
+  return "w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] focus:ring-1 focus:ring-[#D2E659]/30 outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F8F3EA] placeholder-[#665445] transition-all duration-150";
 }
 
-interface NumFieldProps {
-  value: string | number;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  suffix?: string;
-  className?: string;
-  min?: string | number;
-  step?: string;
-}
-
-function NumField({
-  value,
-  onChange,
-  placeholder,
-  suffix,
-  className = "",
-  min,
-  step = "any",
-}: NumFieldProps) {
+function NumField({ value, onChange, placeholder, suffix, className = "", min, step = "any" }) {
   return (
     <div className={`relative ${className}`}>
       <input
@@ -339,10 +268,10 @@ function NumField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`${baseInputClasses()} ${suffix ? "pr-8" : ""}`}
+        className={`${baseInputClasses()} ${suffix ? "pr-9" : ""}`}
       />
       {suffix && (
-        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#827161]">
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#827161]">
           {suffix}
         </span>
       )}
@@ -350,25 +279,7 @@ function NumField({
   );
 }
 
-interface TextFieldProps {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  className?: string;
-  required?: boolean;
-  type?: string;
-  id?: string;
-}
-
-function TextField({
-  value,
-  onChange,
-  placeholder,
-  className = "",
-  required,
-  type = "text",
-  id,
-}: TextFieldProps) {
+function TextField({ value, onChange, placeholder, className = "", required, type = "text", id }) {
   return (
     <input
       id={id}
@@ -382,20 +293,13 @@ function TextField({
   );
 }
 
-interface IconBtnProps {
-  onClick: () => void;
-  title?: string;
-  children: React.ReactNode;
-  danger?: boolean;
-}
-
-function IconBtn({ onClick, title, children, danger }: IconBtnProps) {
+function IconBtn({ onClick, title, children, danger }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={title}
-      className={`shrink-0 rounded-xl p-2 border transition-all active:scale-95 ${
+      className={`shrink-0 rounded-xl p-2.5 border transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D2E659] ${
         danger
           ? "border-[#562B22] text-[#E57762] hover:bg-[#341D18]"
           : "border-[#3A2A1E] text-[#827161] hover:text-[#D2E659] hover:border-[#D2E659]/50 hover:bg-[#201711]"
@@ -406,32 +310,16 @@ function IconBtn({ onClick, title, children, danger }: IconBtnProps) {
   );
 }
 
-interface SectionCardProps {
-  icon: React.ReactNode;
-  title: string;
-  subtotal?: number;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-}
-
-function SectionCard({
-  icon,
-  title,
-  subtotal,
-  right,
-  children,
-  className = "",
-}: SectionCardProps) {
+function SectionCard({ icon, title, subtotal, right, children, className = "" }) {
   return (
     <div
-      className={`rounded-2xl border p-4 sm:p-5 ${className}`}
+      className={`rounded-2xl border p-4 sm:p-6 backdrop-blur-md ${className}`}
       style={{ background: C.panel, borderColor: C.border }}
     >
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#291E16]">
+      <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#291E16]">
         <div className="flex items-center gap-2.5">
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
             style={{ background: C.accentBg, color: C.accent }}
           >
             {icon}
@@ -459,14 +347,7 @@ function SectionCard({
   );
 }
 
-interface RowProps {
-  label: string;
-  value: string;
-  strong?: boolean;
-  tone?: "good" | "bad" | "normal";
-}
-
-function Row({ label, value, strong, tone }: RowProps) {
+function Row({ label, value, strong, tone }) {
   const toneColor =
     tone === "bad" ? C.bad : tone === "good" ? C.good : strong ? C.text : C.textDim;
   return (
@@ -482,29 +363,23 @@ function Row({ label, value, strong, tone }: RowProps) {
   );
 }
 
-interface StepperProps {
-  value: number | string;
-  onChange: (v: number) => void;
-  min?: number;
-}
-
-function Stepper({ value, onChange, min = 1 }: StepperProps) {
+function Stepper({ value, onChange, min = 1 }) {
   return (
     <div className="flex items-center gap-1 bg-[#150F0B] p-1 rounded-xl border border-[#3A2A1E]">
       <button
         type="button"
-        onClick={() => onChange(Math.max(min, (parseInt(String(value), 10) || min) - 1))}
-        className="w-7 h-7 rounded-lg hover:bg-[#2A1E16] flex items-center justify-center text-[#B9A998] transition-colors"
+        onClick={() => onChange(Math.max(min, (parseInt(value, 10) || min) - 1))}
+        className="w-8 h-8 rounded-lg hover:bg-[#2A1E16] flex items-center justify-center text-[#B9A998] transition-colors"
       >
         <Minus size={13} />
       </button>
-      <span className="w-8 text-center text-sm font-bold text-[#F8F3EA]">
+      <span className="w-9 text-center text-sm font-bold text-[#F8F3EA]">
         {value}
       </span>
       <button
         type="button"
-        onClick={() => onChange((parseInt(String(value), 10) || min) + 1)}
-        className="w-7 h-7 rounded-lg hover:bg-[#2A1E16] flex items-center justify-center text-[#B9A998] transition-colors"
+        onClick={() => onChange((parseInt(value, 10) || min) + 1)}
+        className="w-8 h-8 rounded-lg hover:bg-[#2A1E16] flex items-center justify-center text-[#B9A998] transition-colors"
       >
         <Plus size={13} />
       </button>
@@ -513,21 +388,14 @@ function Stepper({ value, onChange, min = 1 }: StepperProps) {
 }
 
 /* ============================================================
-   PRICING TAB (แก้ไขปัญหาตัวเลขถูกบัง + เลย์เอาต์ชัดเจน)
+   PRICING TAB (ตั้งราคาและควบคุมต้นทุน)
    ============================================================ */
-interface PricingTabProps {
-  items: MenuItem[];
-  setItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
-  activeId: string;
-  setActiveId: (id: string) => void;
-}
-
-function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps) {
+function PricingTab({ items, setItems, activeId, setActiveId }) {
   const active = items.find((i) => i.id === activeId) || items[0] || newMenuItem();
   const nextIndex = useRef(items.length + 1);
   const [copied, setCopied] = useState(false);
 
-  const updateItem = (id: string, patch: Partial<MenuItem>) => {
+  const updateItem = (id, patch) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   };
 
@@ -537,8 +405,8 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
     setActiveId(it.id);
   };
 
-  const duplicateItem = (src: MenuItem) => {
-    const cloned: MenuItem = {
+  const duplicateItem = (src) => {
+    const cloned = {
       ...src,
       id: uid(),
       name: `${src.name} (คัดลอก)`,
@@ -549,7 +417,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
     setActiveId(cloned.id);
   };
 
-  const removeItem = (id: string) => {
+  const removeItem = (id) => {
     if (items.length <= 1) return;
     if (!window.confirm("ยืนยันการลบเมนูนี้หรือไม่?")) return;
     setItems((prev) => {
@@ -563,7 +431,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
     });
   };
 
-  const updateIngredient = (itemId: string, ingId: string, patch: Partial<Ingredient>) =>
+  const updateIngredient = (itemId, ingId, patch) =>
     setItems((prev) =>
       prev.map((it) =>
         it.id !== itemId
@@ -577,19 +445,18 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
       )
     );
 
-  const addIngredient = (itemId: string) =>
+  const addIngredient = (itemId) =>
     updateItem(itemId, {
-      ingredients: [...items.find((i) => i.id === itemId)!.ingredients, newIngredient("ml")],
+      ingredients: [...items.find((i) => i.id === itemId).ingredients, newIngredient("ml")],
     });
 
-  const removeIngredient = (itemId: string, ingId: string) => {
+  const removeIngredient = (itemId, ingId) => {
     const it = items.find((i) => i.id === itemId);
-    if (!it) return;
     const rest = it.ingredients.filter((i) => i.id !== ingId);
     updateItem(itemId, { ingredients: rest.length ? rest : [newIngredient("ml")] });
   };
 
-  const updateFixed = (itemId: string, fId: string, patch: Partial<FixedCost>) =>
+  const updateFixed = (itemId, fId, patch) =>
     setItems((prev) =>
       prev.map((it) =>
         it.id !== itemId
@@ -601,19 +468,18 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
       )
     );
 
-  const addFixed = (itemId: string) =>
+  const addFixed = (itemId) =>
     updateItem(itemId, {
-      fixedCosts: [...items.find((i) => i.id === itemId)!.fixedCosts, newFixedCost()],
+      fixedCosts: [...items.find((i) => i.id === itemId).fixedCosts, newFixedCost()],
     });
 
-  const removeFixed = (itemId: string, fId: string) => {
+  const removeFixed = (itemId, fId) => {
     const it = items.find((i) => i.id === itemId);
-    if (!it) return;
     updateItem(itemId, { fixedCosts: it.fixedCosts.filter((f) => f.id !== fId) });
   };
 
   const results = useMemo(() => {
-    const map: Record<string, MenuItemCalc> = {};
+    const map = {};
     items.forEach((it) => (map[it.id] = calcMenuItem(it)));
     return map;
   }, [items]);
@@ -711,7 +577,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <button
             onClick={() => duplicateItem(active)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border hover:border-[#D2E659] hover:text-[#D2E659] transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border hover:border-[#D2E659] hover:text-[#D2E659] transition-colors"
             style={{ borderColor: C.border, color: C.textDim, background: C.panel }}
           >
             <Copy size={13} /> คัดลอกเมนู
@@ -719,7 +585,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
           {items.length > 1 && (
             <button
               onClick={() => removeItem(active.id)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[#562B22] text-[#E57762] hover:bg-[#341D18] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-[#562B22] text-[#E57762] hover:bg-[#341D18] transition-colors"
             >
               <Trash2 size={13} /> ลบเมนู
             </button>
@@ -731,12 +597,22 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
       <div className="grid lg:grid-cols-12 gap-6">
         {/* Left Side: Recipe & Fixed Overheads (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* 1. Ingredients Card with Redesigned Spacious Layout */}
+          {/* 1. Ingredients */}
           <SectionCard
             icon={<GripVertical size={16} />}
             title="วัตถุดิบและสูตรชง"
             subtotal={activeResult.ingredientCost}
           >
+            {/* Desktop Column Header */}
+            <div className="hidden md:grid grid-cols-12 gap-2 px-2 mb-2.5 text-[11px] font-bold text-[#7D6D5E] uppercase tracking-wider">
+              <span className="col-span-4">ชื่อวัตถุดิบ</span>
+              <span className="col-span-3">หน่วยวัด</span>
+              <span className="col-span-2">ราคา/แพ็ค</span>
+              <span className="col-span-1">ขนาด</span>
+              <span className="col-span-1">ใช้/แก้ว</span>
+              <span className="col-span-1 text-right">ต้นทุน</span>
+            </div>
+
             <div className="space-y-3">
               {active.ingredients.map((ing) => {
                 const unitCfg =
@@ -746,23 +622,29 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                 return (
                   <div
                     key={ing.id}
-                    className="p-3.5 rounded-2xl border transition-colors"
+                    className="p-3 md:p-2.5 rounded-2xl border transition-colors group"
                     style={{ background: "#150F0B", borderColor: C.borderSoft }}
                   >
-                    {/* Tier 1: Name + Unit + Cost + Delete */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
-                      <div className="flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
+                      {/* Ingredient Name */}
+                      <div className="md:col-span-4">
+                        <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                          ชื่อวัตถุดิบ
+                        </span>
                         <TextField
                           value={ing.name}
                           onChange={(v) =>
                             updateIngredient(active.id, ing.id, { name: v })
                           }
-                          placeholder="ชื่อวัตถุดิบ เช่น ใบชาไทย, นมสด"
+                          placeholder="เช่น ผงชาไทย, นมสด"
                         />
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {/* Unit selector */}
+                      {/* Unit Conversion Selector */}
+                      <div className="md:col-span-3">
+                        <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                          หน่วยวัด
+                        </span>
                         <select
                           value={ing.unitType}
                           onChange={(e) =>
@@ -770,7 +652,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                               unitType: e.target.value,
                             })
                           }
-                          className="bg-[#1C140F] border border-[#3A2A1E] focus:border-[#D2E659] outline-none rounded-xl px-2.5 py-2 text-xs text-[#F8F3EA] cursor-pointer"
+                          className="w-full bg-[#150F0B] border border-[#3A2A1E] focus:border-[#D2E659] outline-none rounded-xl px-2.5 py-2.5 text-xs text-[#F8F3EA] cursor-pointer"
                         >
                           {UNIT_PRESETS.map((u) => (
                             <option key={u.id} value={u.id}>
@@ -778,17 +660,58 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                             </option>
                           ))}
                         </select>
+                      </div>
 
-                        {/* Calculated Cost Pill (Clear & Never Obstructed) */}
-                        <div className="px-2.5 py-1.5 rounded-xl bg-[#221711] border border-[#3A2A1E] text-right shrink-0">
-                          <span className="text-[10px] block text-[#7D6D5E] leading-none mb-0.5">
-                            ต้นทุน/แก้ว
+                      {/* Numbers Triple */}
+                      <div className="grid grid-cols-3 md:col-span-4 gap-2">
+                        <div>
+                          <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                            ราคาแพ็ค
+                          </span>
+                          <NumField
+                            value={ing.packagePrice}
+                            onChange={(v) =>
+                              updateIngredient(active.id, ing.id, { packagePrice: v })
+                            }
+                            placeholder="฿"
+                          />
+                        </div>
+                        <div>
+                          <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                            ขนาด ({unitCfg.packUnit})
+                          </span>
+                          <NumField
+                            value={ing.packageSize}
+                            onChange={(v) =>
+                              updateIngredient(active.id, ing.id, { packageSize: v })
+                            }
+                            placeholder={unitCfg.packUnit}
+                          />
+                        </div>
+                        <div>
+                          <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
+                            ใช้ ({unitCfg.useUnit})
+                          </span>
+                          <NumField
+                            value={ing.usedPerCup}
+                            onChange={(v) =>
+                              updateIngredient(active.id, ing.id, { usedPerCup: v })
+                            }
+                            placeholder={unitCfg.useUnit}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Per-item Cost & Delete */}
+                      <div className="md:col-span-1 flex items-center justify-between md:justify-end gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-[#241912]">
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden text-xs text-[#7D6D5E] mr-2">
+                            ต้นทุน:
                           </span>
                           <span className="text-xs font-bold text-[#D2E659]">
                             ฿{thb(rowCost)}
                           </span>
                         </div>
-
                         <IconBtn
                           danger
                           title="ลบวัตถุดิบนี้"
@@ -796,48 +719,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                         >
                           <Trash2 size={13} />
                         </IconBtn>
-                      </div>
-                    </div>
-
-                    {/* Tier 2: 3 Spacious Number Fields (Never Squeezed) */}
-                    <div className="grid grid-cols-3 gap-2.5 pt-2.5 border-t border-[#231811]">
-                      <div>
-                        <span className="block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                          ราคาซื้อ (฿)
-                        </span>
-                        <NumField
-                          value={ing.packagePrice}
-                          onChange={(v) =>
-                            updateIngredient(active.id, ing.id, { packagePrice: v })
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-
-                      <div>
-                        <span className="block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                          ขนาดแพ็ค ({unitCfg.packUnit})
-                        </span>
-                        <NumField
-                          value={ing.packageSize}
-                          onChange={(v) =>
-                            updateIngredient(active.id, ing.id, { packageSize: v })
-                          }
-                          placeholder={unitCfg.packUnit}
-                        />
-                      </div>
-
-                      <div>
-                        <span className="block text-[11px] font-medium text-[#7D6D5E] mb-1">
-                          ใช้ต่อแก้ว ({unitCfg.useUnit})
-                        </span>
-                        <NumField
-                          value={ing.usedPerCup}
-                          onChange={(v) =>
-                            updateIngredient(active.id, ing.id, { usedPerCup: v })
-                          }
-                          placeholder={unitCfg.useUnit}
-                        />
                       </div>
                     </div>
                   </div>
@@ -916,11 +797,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                 ].map((m) => (
                   <button
                     key={m.key}
-                    onClick={() =>
-                      updateItem(active.id, {
-                        pricingMode: m.key as "margin" | "markup" | "manual",
-                      })
-                    }
+                    onClick={() => updateItem(active.id, { pricingMode: m.key })}
                     className="py-2 rounded-lg text-xs font-bold transition-all text-center"
                     style={
                       active.pricingMode === m.key
@@ -1027,7 +904,7 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
                 </button>
               </div>
 
-              {/* Big Price Number */}
+              {/* Huge Price Number */}
               <div
                 className="text-[44px] sm:text-[50px] leading-tight font-extrabold my-2 relative z-10"
                 style={{ ...headingFont, color: C.accent }}
@@ -1182,29 +1059,11 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
 }
 
 /* ============================================================
-   LEDGER TAB (รายรับ-รายจ่าย)
+   LEDGER TAB (รายรับ-รายจ่าย & POS หน้าร้าน)
    ============================================================ */
-interface LedgerTabProps {
-  menuItems: MenuItem[];
-  menuResults: Record<string, MenuItemCalc>;
-  txns: Transaction[];
-  setTxns: React.Dispatch<React.SetStateAction<Transaction[]>>;
-  sheetUrl: string;
-  syncNow: (payload: unknown) => void;
-  onOpenSheetConfig: () => void;
-}
-
-function LedgerTab({
-  menuItems,
-  menuResults,
-  txns,
-  setTxns,
-  sheetUrl,
-  syncNow,
-  onOpenSheetConfig,
-}: LedgerTabProps) {
-  const [account, setAccount] = useState<"shop" | "personal">("shop");
-  const [txnType, setTxnType] = useState<"income" | "expense">("expense");
+function LedgerTab({ menuItems, menuResults, txns, setTxns, sheetUrl, syncNow, onOpenSheetConfig }) {
+  const [account, setAccount] = useState("shop");
+  const [txnType, setTxnType] = useState("expense");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayISO());
   const [amount, setAmount] = useState("");
@@ -1231,8 +1090,8 @@ function LedgerTab({
   const saleResult = saleMenu ? menuResults[saleMenu.id] : null;
   const saleUnitPrice = saleResult ? saleResult.finalPrice : 0;
   const saleUnitCost = saleResult ? saleResult.totalCost : 0;
-  const saleTotalPrice = saleUnitPrice * (parseInt(String(saleQty), 10) || 0);
-  const saleTotalCost = saleUnitCost * (parseInt(String(saleQty), 10) || 0);
+  const saleTotalPrice = saleUnitPrice * (parseInt(saleQty, 10) || 0);
+  const saleTotalCost = saleUnitCost * (parseInt(saleQty, 10) || 0);
   const saleProfit = saleTotalPrice - saleTotalCost;
 
   useEffect(() => {
@@ -1247,7 +1106,7 @@ function LedgerTab({
     if (!saleMenuId && menuItems[0]) setSaleMenuId(menuItems[0].id);
   };
 
-  const applyQuickTag = (tag: { title: string; type: "income" | "expense" }) => {
+  const applyQuickTag = (tag) => {
     setSaleMode(false);
     setDescription(tag.title);
     setTxnType(tag.type);
@@ -1259,12 +1118,12 @@ function LedgerTab({
     setSaleMode(false);
   };
 
-  const submitTxn = (e: React.FormEvent) => {
+  const submitTxn = (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!description.trim() || isNaN(amt) || amt <= 0 || !date) return;
 
-    const newTxn: Transaction = {
+    const newTxn = {
       id: "txn_" + Date.now() + "_" + uid(),
       account,
       type: txnType,
@@ -1277,7 +1136,7 @@ function LedgerTab({
         ? {
             linkedMenuId: saleMenu.id,
             linkedMenuName: saleMenu.name,
-            qty: parseInt(String(saleQty), 10) || 1,
+            qty: parseInt(saleQty, 10) || 1,
             unitCost: saleUnitCost,
             unitPrice: saleUnitPrice,
             costTotal: saleTotalCost,
@@ -1291,7 +1150,7 @@ function LedgerTab({
     syncNow({ action: "create", data: newTxn });
   };
 
-  const removeTxn = (id: string) => {
+  const removeTxn = (id) => {
     setTxns((prev) => prev.filter((t) => t.id !== id));
     syncNow({ action: "delete", id, account });
   };
@@ -1340,7 +1199,7 @@ function LedgerTab({
   }, [filtered]);
 
   const grouped = useMemo(() => {
-    const g: Record<string, Transaction[]> = {};
+    const g = {};
     filtered.forEach((t) => {
       if (!g[t.date]) g[t.date] = [];
       g[t.date].push(t);
@@ -1368,8 +1227,8 @@ function LedgerTab({
         style={{ background: C.panel, borderColor: C.border }}
       >
         {[
-          { key: "shop" as const, label: "บัญชีของร้าน (Shop)", Icon: Store, color: C.shop },
-          { key: "personal" as const, label: "บัญชีส่วนตัว (Personal)", Icon: User, color: C.personal },
+          { key: "shop", label: "บัญชีของร้าน (Shop)", Icon: Store, color: C.shop },
+          { key: "personal", label: "บัญชีส่วนตัว (Personal)", Icon: User, color: C.personal },
         ].map((a) => (
           <button
             key={a.key}
@@ -1837,21 +1696,7 @@ function LedgerTab({
 /* ============================================================
    GOOGLE SHEETS CONFIG MODAL
    ============================================================ */
-interface SheetConfigModalProps {
-  open: boolean;
-  onClose: () => void;
-  sheetUrl: string;
-  onSave: (url: string) => void;
-  onDisconnect: () => void;
-}
-
-function SheetConfigModal({
-  open,
-  onClose,
-  sheetUrl,
-  onSave,
-  onDisconnect,
-}: SheetConfigModalProps) {
+function SheetConfigModal({ open, onClose, sheetUrl, onSave, onDisconnect }) {
   const [value, setValue] = useState(sheetUrl);
   useEffect(() => setValue(sheetUrl), [sheetUrl, open]);
   if (!open) return null;
@@ -1918,7 +1763,7 @@ function SheetConfigModal({
 /* ============================================================
    MAIN APP CONTROLLER
    ============================================================ */
-export default function App() {
+export default function DrinkOpsApp() {
   const FONT_LOADED = useRef(false);
   const STORAGE_KEY_MENU = "drinkops_menu_v2";
   const STORAGE_KEY_TXNS = "drinkops_txns_v2";
@@ -1937,10 +1782,10 @@ export default function App() {
     };
   }, []);
 
-  const [tab, setTab] = useState<"pricing" | "ledger">("pricing");
+  const [tab, setTab] = useState("pricing"); // 'pricing' | 'ledger'
 
   // Pricing State (Saved to LocalStorage)
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
+  const [menuItems, setMenuItems] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_MENU);
       if (saved) {
@@ -1960,13 +1805,13 @@ export default function App() {
   }, [menuItems]);
 
   const menuResults = useMemo(() => {
-    const map: Record<string, MenuItemCalc> = {};
+    const map = {};
     menuItems.forEach((it) => (map[it.id] = calcMenuItem(it)));
     return map;
   }, [menuItems]);
 
   // Ledger State (Saved to LocalStorage + Sync Sheet)
-  const [txns, setTxns] = useState<Transaction[]>(() => {
+  const [txns, setTxns] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TXNS);
       if (saved) {
@@ -1991,10 +1836,10 @@ export default function App() {
     }
   });
 
-  const [syncState, setSyncState] = useState<"none" | "syncing" | "synced" | "error">("none");
+  const [syncState, setSyncState] = useState("none"); // none | syncing | synced | error
   const [modalOpen, setModalOpen] = useState(false);
 
-  const fetchFromSheet = useCallback(async (url: string) => {
+  const fetchFromSheet = useCallback(async (url) => {
     if (!url) return;
     setSyncState("syncing");
     try {
@@ -2016,7 +1861,7 @@ export default function App() {
   }, [sheetUrl, fetchFromSheet]);
 
   const syncNow = useCallback(
-    async (payload: unknown) => {
+    async (payload) => {
       if (!sheetUrl) return;
       setSyncState("syncing");
       try {
@@ -2034,7 +1879,7 @@ export default function App() {
     [sheetUrl]
   );
 
-  const saveSheetUrl = (url: string) => {
+  const saveSheetUrl = (url) => {
     setSheetUrl(url);
     try {
       localStorage.setItem(STORAGE_KEY_SHEET, url);
@@ -2158,6 +2003,7 @@ export default function App() {
           />
         )}
 
+        {/* Persistent Footnote */}
         <p className="text-[11px] mt-8 text-center text-[#7D6D5E]">
           ✓ ข้อมูลเมนูและรายการบัญชีบันทึกลงในเครื่องของคุณ (Local Storage) อัตโนมัติ ปิดหน้าเว็บข้อมูลไม่สูญหาย
         </p>
