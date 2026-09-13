@@ -555,15 +555,12 @@ function PricingTab({ items, setItems, activeId, setActiveId }: PricingTabProps)
   const removeItem = (id: string) => {
     if (items.length <= 1) return;
     if (!window.confirm("ยืนยันการลบเมนูนี้หรือไม่?")) return;
-    setItems((prev) => {
-      const next = prev.filter((i) => i.id !== id);
-      return next.length ? next : [newMenuItem()];
-    });
-    setActiveId((cur) => {
-      if (cur !== id) return cur;
-      const rest = items.filter((i) => i.id !== id);
-      return rest.length ? rest[0].id : items[0].id;
-    });
+    const nextItems = items.filter((i) => i.id !== id);
+    const fallback = nextItems.length > 0 ? nextItems : [newMenuItem()];
+    setItems(fallback);
+    if (activeId === id) {
+      setActiveId(fallback[0].id);
+    }
   };
 
   const updateIngredient = (itemId: string, ingId: string, patch: Partial<Ingredient>) =>
