@@ -18,12 +18,6 @@ import {
   Minus,
   Copy,
   Check,
-  RotateCcw,
-  Sparkles,
-  Calendar,
-  Layers,
-  ChevronRight,
-  RefreshCw,
 } from "lucide-react";
 
 /* ============================================================
@@ -420,15 +414,14 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
   const removeItem = (id) => {
     if (items.length <= 1) return;
     if (!window.confirm("ยืนยันการลบเมนูนี้หรือไม่?")) return;
-    setItems((prev) => {
-      const next = prev.filter((i) => i.id !== id);
-      return next.length ? next : [newMenuItem()];
-    });
-    setActiveId((cur) => {
-      if (cur !== id) return cur;
-      const rest = items.filter((i) => i.id !== id);
-      return rest.length ? rest[0].id : items[0].id;
-    });
+
+    const rest = items.filter((i) => i.id !== id);
+    const nextActiveId = activeId === id ? (rest.length ? rest[0].id : "") : activeId;
+
+    setItems(rest.length ? rest : [newMenuItem()]);
+    if (nextActiveId) {
+      setActiveId(nextActiveId);
+    }
   };
 
   const updateIngredient = (itemId, ingId, patch) =>
@@ -445,15 +438,24 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
       )
     );
 
-  const addIngredient = (itemId) =>
-    updateItem(itemId, {
-      ingredients: [...items.find((i) => i.id === itemId).ingredients, newIngredient("ml")],
-    });
+  const addIngredient = (itemId) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId
+          ? { ...it, ingredients: [...it.ingredients, newIngredient("ml")] }
+          : it
+      )
+    );
+  };
 
   const removeIngredient = (itemId, ingId) => {
-    const it = items.find((i) => i.id === itemId);
-    const rest = it.ingredients.filter((i) => i.id !== ingId);
-    updateItem(itemId, { ingredients: rest.length ? rest : [newIngredient("ml")] });
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== itemId) return it;
+        const rest = it.ingredients.filter((i) => i.id !== ingId);
+        return { ...it, ingredients: rest.length ? rest : [newIngredient("ml")] };
+      })
+    );
   };
 
   const updateFixed = (itemId, fId, patch) =>
@@ -468,14 +470,24 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
       )
     );
 
-  const addFixed = (itemId) =>
-    updateItem(itemId, {
-      fixedCosts: [...items.find((i) => i.id === itemId).fixedCosts, newFixedCost()],
-    });
+  const addFixed = (itemId) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId
+          ? { ...it, fixedCosts: [...it.fixedCosts, newFixedCost()] }
+          : it
+      )
+    );
+  };
 
   const removeFixed = (itemId, fId) => {
-    const it = items.find((i) => i.id === itemId);
-    updateItem(itemId, { fixedCosts: it.fixedCosts.filter((f) => f.id !== fId) });
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId
+          ? { ...it, fixedCosts: it.fixedCosts.filter((f) => f.id !== fId) }
+          : it
+      )
+    );
   };
 
   const results = useMemo(() => {
@@ -603,7 +615,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
             title="วัตถุดิบและสูตรชง"
             subtotal={activeResult.ingredientCost}
           >
-            {/* Desktop Column Header */}
             <div className="hidden md:grid grid-cols-12 gap-2 px-2 mb-2.5 text-[11px] font-bold text-[#7D6D5E] uppercase tracking-wider">
               <span className="col-span-4">ชื่อวัตถุดิบ</span>
               <span className="col-span-3">หน่วยวัด</span>
@@ -626,7 +637,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                     style={{ background: "#150F0B", borderColor: C.borderSoft }}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
-                      {/* Ingredient Name */}
                       <div className="md:col-span-4">
                         <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
                           ชื่อวัตถุดิบ
@@ -640,7 +650,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                         />
                       </div>
 
-                      {/* Unit Conversion Selector */}
                       <div className="md:col-span-3">
                         <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
                           หน่วยวัด
@@ -662,7 +671,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                         </select>
                       </div>
 
-                      {/* Numbers Triple */}
                       <div className="grid grid-cols-3 md:col-span-4 gap-2">
                         <div>
                           <span className="md:hidden block text-[11px] font-medium text-[#7D6D5E] mb-1">
@@ -702,7 +710,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                         </div>
                       </div>
 
-                      {/* Per-item Cost & Delete */}
                       <div className="md:col-span-1 flex items-center justify-between md:justify-end gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-[#241912]">
                         <div className="text-left md:text-right">
                           <span className="md:hidden text-xs text-[#7D6D5E] mr-2">
@@ -787,7 +794,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
         {/* Right Side: Pricing Strategy & Sticky Live Summary (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="lg:sticky lg:top-6 space-y-6">
-            {/* Pricing Mode Selector */}
             <SectionCard icon={<Percent size={16} />} title="กลยุทธ์ตั้งราคาขาย">
               <div className="grid grid-cols-3 gap-1.5 p-1 mb-4 rounded-xl bg-[#140E0A] border border-[#2B1F16]">
                 {[
@@ -827,7 +833,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                     />
                   </div>
 
-                  {/* Fast GP presets */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] text-[#7D6D5E]">เป้าหมายแนะนำ:</span>
                     {[50, 60, 65, 70].map((p) => (
@@ -881,7 +886,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
               )}
             </SectionCard>
 
-            {/* Hero Price & Profit Card */}
             <div
               className="rounded-3xl border p-6 relative overflow-hidden shadow-2xl"
               style={{ background: C.panelAlt, borderColor: C.border }}
@@ -904,7 +908,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                 </button>
               </div>
 
-              {/* Huge Price Number */}
               <div
                 className="text-[44px] sm:text-[50px] leading-tight font-extrabold my-2 relative z-10"
                 style={{ ...headingFont, color: C.accent }}
@@ -912,7 +915,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                 ฿{thb(activeResult.finalPrice)}
               </div>
 
-              {/* Progress Bar: Cost vs Profit */}
               <div
                 className="h-2.5 rounded-full overflow-hidden flex mb-2 relative z-10"
                 style={{ background: "#2A1E16" }}
@@ -938,7 +940,6 @@ function PricingTab({ items, setItems, activeId, setActiveId }) {
                 <span>กำไรสุทธิ {thb(100 - activeResult.costSharePct)}%</span>
               </div>
 
-              {/* Cost Rows Breakdown */}
               <div className="space-y-1.5 border-t border-[#312319] pt-4 relative z-10">
                 <Row label="ต้นทุนวัตถุดิบต่อแก้ว" value={`฿${thb(activeResult.ingredientCost)}`} />
                 <Row label="ต้นทุนคงที่/แพ็กเกจ" value={`฿${thb(activeResult.fixedCost)}`} />
@@ -1368,7 +1369,6 @@ function LedgerTab({ menuItems, menuResults, txns, setTxns, sheetUrl, syncNow, o
           </span>
         </div>
 
-        {/* Smart Categories Chips */}
         {!saleMode && (
           <div className="flex flex-wrap gap-2 mb-4">
             {account === "shop" && (
@@ -1601,7 +1601,6 @@ function LedgerTab({ menuItems, menuResults, txns, setTxns, sheetUrl, syncNow, o
                 className="rounded-2xl overflow-hidden border"
                 style={{ background: C.panel, borderColor: C.border }}
               >
-                {/* Date header */}
                 <div
                   className="px-4 py-2.5 flex items-center justify-between text-xs border-b"
                   style={{ background: C.panelAlt, borderColor: C.borderSoft }}
@@ -1615,7 +1614,6 @@ function LedgerTab({ menuItems, menuResults, txns, setTxns, sheetUrl, syncNow, o
                   </div>
                 </div>
 
-                {/* Day rows */}
                 <div>
                   {dayItems.map((it) => {
                     const isInc = it.type === "income";
@@ -1764,27 +1762,12 @@ function SheetConfigModal({ open, onClose, sheetUrl, onSave, onDisconnect }) {
    MAIN APP CONTROLLER
    ============================================================ */
 export default function DrinkOpsApp() {
-  const FONT_LOADED = useRef(false);
   const STORAGE_KEY_MENU = "drinkops_menu_v2";
   const STORAGE_KEY_TXNS = "drinkops_txns_v2";
   const STORAGE_KEY_SHEET = "drinkops_sheet_url_v2";
 
-  useEffect(() => {
-    if (FONT_LOADED.current) return;
-    FONT_LOADED.current = true;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap";
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
+  const [tab, setTab] = useState("pricing");
 
-  const [tab, setTab] = useState("pricing"); // 'pricing' | 'ledger'
-
-  // Pricing State (Saved to LocalStorage)
   const [menuItems, setMenuItems] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_MENU);
@@ -1810,7 +1793,6 @@ export default function DrinkOpsApp() {
     return map;
   }, [menuItems]);
 
-  // Ledger State (Saved to LocalStorage + Sync Sheet)
   const [txns, setTxns] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TXNS);
@@ -1836,7 +1818,7 @@ export default function DrinkOpsApp() {
     }
   });
 
-  const [syncState, setSyncState] = useState("none"); // none | syncing | synced | error
+  const [syncState, setSyncState] = useState("none");
   const [modalOpen, setModalOpen] = useState(false);
 
   const fetchFromSheet = useCallback(async (url) => {
@@ -1913,8 +1895,10 @@ export default function DrinkOpsApp() {
         color: C.text,
       }}
     >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+      `}</style>
       <div className="max-w-5xl mx-auto">
-        {/* Top App Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
           <div className="flex items-center gap-3.5">
             <div
@@ -1946,7 +1930,6 @@ export default function DrinkOpsApp() {
           </button>
         </div>
 
-        {/* Top-Level Navigation Tabs */}
         <div
           className="p-1.5 rounded-2xl grid grid-cols-2 gap-2 mb-7 border"
           style={{ background: C.panel, borderColor: C.border }}
@@ -1983,7 +1966,6 @@ export default function DrinkOpsApp() {
           </button>
         </div>
 
-        {/* Tab View */}
         {tab === "pricing" ? (
           <PricingTab
             items={menuItems}
@@ -2003,7 +1985,6 @@ export default function DrinkOpsApp() {
           />
         )}
 
-        {/* Persistent Footnote */}
         <p className="text-[11px] mt-8 text-center text-[#7D6D5E]">
           ✓ ข้อมูลเมนูและรายการบัญชีบันทึกลงในเครื่องของคุณ (Local Storage) อัตโนมัติ ปิดหน้าเว็บข้อมูลไม่สูญหาย
         </p>
